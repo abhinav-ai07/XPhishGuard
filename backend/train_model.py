@@ -44,6 +44,9 @@ FEATURE_NAMES = [
     "has_scam_keywords", "is_trusted_domain", "is_institutional_tld",
     "is_search_engine", "is_ai_platform", "is_streaming_platform",
     "is_coding_platform", "is_educational_platform", "is_social_platform",
+    # Phase 1.6
+    "has_malformed_chars", "special_char_ratio", "query_entropy",
+    "has_script_payload", "has_homoglyph_spoof"
 ]
 
 # ──────────────────────────────────────────────────────────────────
