@@ -1,50 +1,95 @@
 import React from 'react';
 import clsx from 'clsx';
-import { Activity } from 'lucide-react';
+import { Activity, Gauge } from 'lucide-react';
 
 const ThreatMeter = ({ confidence, riskLevel }) => {
   // confidence is a float 0.0 to 1.0
   const percentage = Math.round(confidence * 100);
   
-  let colorClass = 'bg-safe';
+  let colorClass = 'from-safe to-green-400';
   let glowClass = 'glow-safe';
+  let textColor = 'text-safe';
+  let statusText = 'SAFE';
   
   if (riskLevel === 'HIGH') {
-    colorClass = 'bg-danger';
+    colorClass = 'from-danger to-red-500';
     glowClass = 'glow-danger';
+    textColor = 'text-danger';
+    statusText = 'CRITICAL';
   } else if (riskLevel === 'MEDIUM') {
-    colorClass = 'bg-yellow-500';
-    glowClass = 'shadow-[0_0_15px_rgba(234,179,8,0.3)]';
+    colorClass = 'from-amber-500 to-orange-500';
+    glowClass = 'shadow-[0_0_20px_rgba(245,158,11,0.4)]';
+    textColor = 'text-amber-400';
+    statusText = 'WARNING';
   }
 
   return (
-    <div className="glass-panel p-6 w-full">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <Activity className="w-5 h-5 text-gray-400" />
-          <h3 className="text-sm font-semibold tracking-wider text-gray-300 uppercase">Threat Confidence</h3>
+    <div className={clsx(
+      "glass-panel p-6 w-full border-2 relative overflow-hidden",
+      riskLevel === 'HIGH' ? 'border-danger/30 bg-danger/5' : riskLevel === 'MEDIUM' ? 'border-amber-500/30 bg-amber-500/5' : 'border-safe/30 bg-safe/5'
+    )}>
+      {/* Background glow */}
+      <div className={clsx(
+        "absolute -right-8 -top-8 w-24 h-24 rounded-full blur-2xl opacity-20 pointer-events-none",
+        riskLevel === 'HIGH' ? "bg-danger" : riskLevel === 'MEDIUM' ? "bg-amber-500" : "bg-safe"
+      )} />
+
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center space-x-2.5">
+            <div className={clsx("p-2 rounded-lg", riskLevel === 'HIGH' ? 'bg-danger/20' : riskLevel === 'MEDIUM' ? 'bg-amber-500/20' : 'bg-safe/20')}>
+              <Gauge className={clsx("w-5 h-5", textColor)} />
+            </div>
+            <h3 className="text-sm font-extrabold tracking-widest text-gray-200 uppercase font-mono">Threat Score</h3>
+          </div>
+          <div className="text-right">
+            <div className={clsx("font-mono font-black text-4xl leading-none", textColor)}>
+              {percentage}
+              <span className="text-sm text-gray-400 ml-1">%</span>
+            </div>
+            <p className={clsx("text-xs font-bold tracking-widest mt-1", textColor)}>
+              {statusText}
+            </p>
+          </div>
         </div>
-        <span className={clsx("font-mono font-bold text-2xl", 
-          riskLevel === 'HIGH' ? 'text-danger' : riskLevel === 'MEDIUM' ? 'text-yellow-500' : 'text-safe'
-        )}>
-          {percentage}%
-        </span>
-      </div>
-      
-      <div className="h-4 bg-gray-800 rounded-full overflow-hidden relative">
-        <div 
-          className={clsx("h-full rounded-full transition-all duration-1000 ease-out relative", colorClass, glowClass)}
-          style={{ width: `${percentage}%` }}
-        >
-          {/* Animated shine effect */}
-          <div className="absolute inset-0 bg-white/20 w-full animate-[pulse_2s_ease-in-out_infinite]"></div>
+        
+        {/* Main confidence bar */}
+        <div className="relative h-3 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800/50 shadow-inner">
+          {/* Background track */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-800/20 to-transparent rounded-full" />
+          
+          {/* Filled progress */}
+          <div 
+            className={clsx(
+              "h-full rounded-full transition-all duration-1000 ease-out relative bg-gradient-to-r shadow-lg",
+              colorClass,
+              glowClass
+            )}
+            style={{ width: `${percentage}%` }}
+          >
+            {/* Animated shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/10 to-transparent animate-[shimmer_2s_ease-in-out_infinite]"></div>
+            
+            {/* Moving light */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-1/4 animate-[slide_2s_ease-in-out_infinite]"></div>
+          </div>
         </div>
-      </div>
-      
-      <div className="mt-3 flex justify-between text-xs font-mono text-gray-500">
-        <span>0% (SAFE)</span>
-        <span>50%</span>
-        <span>100% (CRITICAL)</span>
+        
+        {/* Labels */}
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-wider block mb-1">Low</span>
+            <div className="h-1 rounded-full bg-safe/30 mx-auto w-8" />
+          </div>
+          <div>
+            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-wider block mb-1">Medium</span>
+            <div className="h-1 rounded-full bg-amber-500/30 mx-auto w-8" />
+          </div>
+          <div>
+            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-wider block mb-1">High</span>
+            <div className="h-1 rounded-full bg-danger/30 mx-auto w-8" />
+          </div>
+        </div>
       </div>
     </div>
   );
