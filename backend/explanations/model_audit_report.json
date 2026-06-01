@@ -1,0 +1,170 @@
+{
+  "dataset_sample_size": 300,
+  "top_features": [
+    {
+      "feature": "url_length",
+      "importance": "209.22%"
+    },
+    {
+      "feature": "subdomain_count",
+      "importance": "58.75%"
+    },
+    {
+      "feature": "special_char_ratio",
+      "importance": "50.60%"
+    },
+    {
+      "feature": "domain_entropy",
+      "importance": "50.25%"
+    },
+    {
+      "feature": "is_risky_tld",
+      "importance": "33.86%"
+    },
+    {
+      "feature": "dot_count",
+      "importance": "30.39%"
+    },
+    {
+      "feature": "token_count",
+      "importance": "25.17%"
+    },
+    {
+      "feature": "is_trusted_domain",
+      "importance": "16.43%"
+    },
+    {
+      "feature": "is_institutional_tld",
+      "importance": "16.12%"
+    },
+    {
+      "feature": "digit_ratio",
+      "importance": "13.00%"
+    }
+  ],
+  "most_dangerous_features": [
+    {
+      "feature": "has_script_payload",
+      "reason": "Triggers immediate max probability of 99% (Overrides Trust)"
+    },
+    {
+      "feature": "has_malformed_chars",
+      "reason": "Adds +60% risk score and overrides clean trust layers"
+    },
+    {
+      "feature": "brand_impersonation",
+      "reason": "Adds +30% risk score, highly correlated with targeted phishing"
+    }
+  ],
+  "most_trusted_features": [
+    {
+      "feature": "is_trusted_domain",
+      "reason": "Scales final probability down to <= 5% (Clean payload only)"
+    },
+    {
+      "feature": "is_institutional_tld",
+      "reason": "Scales final probability down to <= 8% (.edu/.gov TLDs)"
+    },
+    {
+      "feature": "is_search_engine",
+      "reason": "Reduces risk score by 75% for verified search indexers"
+    }
+  ],
+  "bias_indicators": {
+    "https_vs_http": {
+      "https_phishing_prediction_rate": "32.9%",
+      "http_phishing_prediction_rate": "63.1%",
+      "description": "Indicates if the model has a shortcut rule predicting SAFE purely based on HTTPS connection presence."
+    },
+    "risky_tld_vs_safe": {
+      "risky_tld_phishing_prediction_rate": "100.0%",
+      "safe_tld_phishing_prediction_rate": "37.4%",
+      "description": "Measures bias towards classifying domains with custom/risky TLDs as phishing."
+    }
+  },
+  "feature_dominance": [
+    {
+      "feature": "url_length",
+      "count": 195,
+      "percentage": "65.0%"
+    },
+    {
+      "feature": "subdomain_count",
+      "count": 26,
+      "percentage": "8.7%"
+    },
+    {
+      "feature": "domain_entropy",
+      "count": 25,
+      "percentage": "8.3%"
+    },
+    {
+      "feature": "special_char_ratio",
+      "count": 21,
+      "percentage": "7.0%"
+    },
+    {
+      "feature": "is_risky_tld",
+      "count": 17,
+      "percentage": "5.7%"
+    }
+  ],
+  "error_analysis": {
+    "false_positives_count": 6,
+    "false_negatives_count": 32,
+    "false_positives_sample": [
+      {
+        "url": "https://www.news.janegoodall.org",
+        "confidence": "90.3%"
+      },
+      {
+        "url": "https://www.mera400.pl",
+        "confidence": "56.7%"
+      },
+      {
+        "url": "https://www.mtbs3d.com",
+        "confidence": "52.2%"
+      },
+      {
+        "url": "https://www.wscs.info",
+        "confidence": "90.4%"
+      },
+      {
+        "url": "https://www.essays.quotidiana.org",
+        "confidence": "89.5%"
+      }
+    ],
+    "false_negatives_sample": [
+      {
+        "url": "http://www.thruhere.net",
+        "confidence": "21.3%"
+      },
+      {
+        "url": "http://www.mamj.ru",
+        "confidence": "20.6%"
+      },
+      {
+        "url": "http://www.imsa.com.au",
+        "confidence": "6.1%"
+      },
+      {
+        "url": "http://www.artzvuk.by",
+        "confidence": "25.3%"
+      },
+      {
+        "url": "http://www.acmarketsapp.com",
+        "confidence": "16.7%"
+      }
+    ],
+    "top_false_positive_contributors": {
+      "digit_ratio": "+67.6%",
+      "subdomain_count": "+48.0%",
+      "is_risky_tld": "+37.3%"
+    },
+    "top_false_negative_contributors": {
+      "url_length": "-178.1%",
+      "subdomain_count": "-36.5%",
+      "domain_entropy": "-20.7%"
+    }
+  }
+}
