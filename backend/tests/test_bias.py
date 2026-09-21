@@ -1,9 +1,10 @@
 import os
 import sys
 
-backend_dir = os.path.dirname(os.path.abspath(__file__))
+# Ensure backend root is in sys.path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if backend_dir not in sys.path:
-    sys.path.append(backend_dir)
+    sys.path.insert(0, backend_dir)
 
 from predict import predict_url
 
@@ -56,7 +57,7 @@ test_cases = [
 ]
 
 
-def main():
+def run_tests():
     print("\n=======================================================")
     print("      XPHISHGUARD AI - CONTEXT-AWARE VERIFICATION")
     print("=======================================================\n")
@@ -72,24 +73,12 @@ def main():
             result = predict_url(case["url"])
             detected_phishing = result["is_phishing"]
             pred_text = "PHISHING" if detected_phishing else "SAFE"
-            confidence = result["confidence"] * 100
+            confidence = result["confidence_score"] * 100
 
             print(f"  Detected: {pred_text} (Confidence: {confidence:.2f}%)")
 
-            features = result["features"]
-            highlights = []
-            if features["is_trusted_domain"]:
-                highlights.append("Trusted Domain Match")
-            if features["brand_impersonation"]:
-                highlights.append("Brand Typosquat Spoof")
-            if features["is_risky_tld"]:
-                highlights.append("Risky TLD registry")
-            if features["has_scam_keywords"]:
-                highlights.append("Adult/Scam keyword")
-            if features["has_https"]:
-                highlights.append("HTTPS Protocol")
-
-            print(f"  Signals : {', '.join(highlights) if highlights else 'None'}")
+            signals = result.get("triggered_signals", [])
+            print(f"  Signals : {', '.join(signals) if signals else 'None'}")
 
             if detected_phishing == case["expected_phishing"]:
                 print("  STATUS  : PASSED")
@@ -106,7 +95,9 @@ def main():
     print(f"  Tests passed        : {passed_tests} / {len(test_cases)}")
     print(f"  Success Rate        : {(passed_tests / len(test_cases)) * 100:.2f}%")
     print("===========================================================\n")
+    return passed_tests == len(test_cases)
 
 
 if __name__ == "__main__":
-    main()
+    success = run_tests()
+    sys.exit(0 if success else 1)

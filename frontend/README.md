@@ -1,16 +1,54 @@
-# React + Vite
+# XPhishGuard AI — Cyber SOC Frontend Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, high-performance Security Operations Center (SOC) dashboard built with **React 19**, **Vite**, and **Tailwind CSS**. It connects to the XPhishGuard Flask backend to visualize phishing predictions, SHAP explainability waterfall/force charts, brand spoofing diagnostics, and model auditing.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Real-Time URL Scanner**: Enter any suspicious link to get immediate verdict (Safe / Suspicious / High Risk / Dangerous).
+- **Explainable AI (XAI) Explanations**: Human-readable natural language breakdown explaining *why* a URL was flagged.
+- **Visual XAI Charts**: Render SHAP local importance, waterfall plots, and force plots directly in the browser.
+- **Threat Intelligence Feed**: Aggregated live detection signals from VirusTotal, PhishTank, OpenPhish, and URLHaus.
+- **XAI Model Auditing**: Interactive section to inspect global model bias, feature correlations, and fairness audits.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Quickstart Guide
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 1. Prerequisites
+- **Node.js**: v18.0 or higher
+- **npm** or **yarn**
+- **XPhishGuard Backend** running on `http://localhost:5000`
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Start Development Server
+```bash
+npm run dev
+```
+The application will start at `http://localhost:5173`.
+
+### 4. Build for Production
+```bash
+npm run build
+```
+Builds the static application to the `dist/` directory.
+
+### 5. Preview Production Build
+```bash
+npm run preview
+```
+
+---
+
+## Configuration
+
+By default, the frontend sends requests to `http://localhost:5000/api`. You can override this by creating a `.env` file in the `frontend/` directory:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```

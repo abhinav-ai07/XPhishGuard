@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>XPhishGuard AI</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+
+    <header class="header">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2 L21 5.5 V11 C21 16 17.5 20 12 22 C6.5 20 3 16 3 11 V5.5 Z" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M8 12 L10.8 15 L16 8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="brand-word">XPHISHGUARD AI</span>
+      </div>
+      <div class="status-readout" id="status-label">
+         <span class="status-dot"></span> Backend Online
+      </div>
+    </header>
+
+    <main id="main-content">
+
+      <!-- SECTION 1: Header / Current Website -->
+      <div class="target-bar">
+        <span class="target-url" id="url-display">resolving…</span>
+      </div>
+
+      <!-- SECTION 2: Large Circular Risk Score -->
+      <div class="scan-frame" id="scan-frame">
+        <span class="bracket bracket-tl"></span>
+        <span class="bracket bracket-tr"></span>
+        <span class="bracket bracket-bl"></span>
+        <span class="bracket bracket-br"></span>
+        <div class="scan-sweep" id="scan-sweep"></div>
+
+        <svg viewBox="0 0 36 36" class="circular-chart">
+          <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path class="circle" id="risk-circle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        </svg>
+        <div class="scan-readout">
+          <span class="scan-score" id="risk-text">0%</span>
+          <span class="scan-score-label" id="risk-level">SAFE</span>
+        </div>
+      </div>
+      
+      <div class="confidence-display">
+        Confidence: <span id="confidence-text">0%</span>
+      </div>
+
+      <!-- SECTION 3: AI Verdict Card -->
+      <div class="verdict-strip" id="verdict-box">
+        <div class="verdict-main">
+          <h2 id="verdict-title">—</h2>
+          <p id="verdict-subtitle">Awaiting scan result</p>
+        </div>
+      </div>
+
+      <!-- SECTION 4: Why did AI give this score? -->
+      <div class="section-title" id="why-title">Why did AI give this score?</div>
+      <div class="shap-list" id="shap-list">
+        <!-- Injected via JS -->
+      </div>
+
+      <!-- SECTION 5: Risk Breakdown -->
+      <div class="section-title">Risk Breakdown</div>
+      <div class="risk-breakdown" id="risk-breakdown">
+        <!-- Injected via JS -->
+      </div>
+
+      <!-- SECTION 6: Recommendations -->
+      <div class="recommendations" id="recommendations">
+        <!-- Injected via JS -->
+      </div>
+
+      <!-- SECTION 7: Technical Details (Collapsed) -->
+      <div class="dossier">
+        <button class="dossier-btn" id="btn-tech">
+          <span class="dossier-title">Technical Details</span>
+          <span class="dossier-toggle">+</span>
+        </button>
+        <div class="dossier-content" id="content-tech">
+          <table class="data-table">
+            <tbody id="data-rows">
+              <!-- Rows injected via JS -->
+            </tbody>
+          </table>
+          
+          <div class="investigation-report" id="investigation-report" style="margin-top: 10px;">
+            <!-- Investigation details injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <button id="download-report-btn" class="btn btn-primary" disabled>Download Report</button>
+        <button id="rescan-btn" class="btn btn-ghost">Rescan</button>
+      </div>
+
+      <div class="scan-timestamp" id="scan-timestamp"></div>
+    </main>
+
+    <div id="error-screen" class="hidden">
+      <svg class="error-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2 L21 5.5 V11 C21 16 17.5 20 12 22 C6.5 20 3 16 3 11 V5.5 Z" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M12 8v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="12" cy="16" r="0.9" fill="currentColor"/>
+      </svg>
+      <h3>Backend Not Running</h3>
+      <p>Ensure the XPhishGuard Flask server is online, then retry.</p>
+      <button id="retry-btn" class="btn btn-primary">Retry Connection</button>
+    </div>
+
+  </div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

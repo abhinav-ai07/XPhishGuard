@@ -2,25 +2,12 @@ import os
 import requests
 import base64
 
-# Local mock database for deterministic test cases
-MOCK_VIRUSTOTAL = {
-    "https://youtube-security-alert.xyz": 42,
-    "https://netfliix-login-auth.net": 25,
-    "https://paypal-verification-secure-login.com": 30,
-    "https://adult-dating-porn-webcam-leak.top": 3
-}
-
 def query_virustotal(url: str) -> int:
     """
     Queries VirusTotal v3 API for the number of malicious detections.
-    If VT_API_KEY is not in environment or if request fails, returns mock value
-    for testing URLs or 0 as default.
+    If VT_API_KEY is not in environment or if request fails, returns 0.
     """
-    # Check mock database first to ensure local tests are deterministic
     clean_url = url.strip().lower()
-    for mock_url, detections in MOCK_VIRUSTOTAL.items():
-        if mock_url in clean_url:
-            return detections
 
     api_key = os.getenv("VT_API_KEY")
     if not api_key:

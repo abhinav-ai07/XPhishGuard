@@ -1,13 +1,6 @@
 import time
 import requests
 
-MOCK_OPENPHISH = {
-    "https://youtube-security-alert.xyz": True,
-    "https://netfliix-login-auth.net": False,
-    "https://paypal-verification-secure-login.com": True,
-    "https://adult-dating-porn-webcam-leak.top": False
-}
-
 # In-memory feed cache to avoid excessive downloads during analysis
 _OPENPHISH_CACHE = set()
 _LAST_FETCH_TIME = 0
@@ -20,11 +13,6 @@ def query_openphish(url: str) -> bool:
     """
     global _OPENPHISH_CACHE, _LAST_FETCH_TIME
     clean_url = url.strip().lower()
-
-    # Check mock database first for deterministic test urls
-    for mock_url, is_phish in MOCK_OPENPHISH.items():
-        if mock_url in clean_url:
-            return is_phish
 
     current_time = time.time()
     if not _OPENPHISH_CACHE or (current_time - _LAST_FETCH_TIME) > CACHE_DURATION_SECONDS:

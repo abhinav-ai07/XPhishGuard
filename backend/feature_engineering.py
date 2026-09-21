@@ -53,14 +53,17 @@ TRUSTED_DOMAINS = {
     "wikipedia", "archive", "medium", "substack", "wordpress",
     # Institutions
     "rvce", "iitb", "iitd", "iisc", "bits", "vit", "manipal", "mit", "stanford", "harvard",
+    # Sports / News
+    "cricbuzz", "espncricinfo", "espn", "bbc", "cnn"
 }
 
 SEARCH_ENGINES   = {"google", "bing", "yahoo", "duckduckgo", "baidu", "yandex", "ask"}
 AI_PLATFORMS     = {"openai", "chatgpt", "claude", "gemini", "perplexity", "anthropic", "copilot", "huggingface"}
 STREAMING        = {"youtube", "netflix", "spotify", "twitch", "hulu", "hotstar", "primevideo"}
-CODING           = {"github", "gitlab", "bitbucket", "stackoverflow", "leetcode", "hackerrank", "kaggle"}
+CODING           = {"github", "gitlab", "bitbucket", "stackoverflow", "leetcode", "hackerrank", "kaggle", "geeksforgeeks"}
 EDUCATIONAL      = {"coursera", "udemy", "edx", "pluralsight", "codecademy", "khanacademy", "wikipedia"}
 SOCIAL           = {"twitter", "x", "facebook", "instagram", "linkedin", "reddit", "discord", "tiktok"}
+SPORTS_NEWS      = {"cricbuzz", "espncricinfo", "espn", "bbc", "cnn"}
 
 INSTITUTIONAL_TLDS = {
     "edu", "gov", "mil", "int", "ac.in", "edu.in", "gov.in", "nic.in", "res.in",
@@ -70,6 +73,7 @@ INSTITUTIONAL_TLDS = {
 RISKY_TLDS = {
     "xyz", "tk", "ml", "ga", "cf", "gq", "club", "top", "vip", "win", "bid", 
     "stream", "date", "download", "online", "icu", "site", "info", "cc", "work", "click",
+    "live", "quest", "loan", "review"
 }
 
 SHORTENERS = {
@@ -90,9 +94,17 @@ SCAM_KEYWORDS = {
     "cash-prize", "rich-quick", "viagra", "levitra", "webcam-leak", "airdrop-claim",
 }
 
+FAKE_LOGIN_KEYWORDS = {"login", "signin", "verify", "secure", "update", "account", "authenticate", "credential", "validation", "confirm", "reset-password"}
+FINANCIAL_KEYWORDS = {"paypal", "bank", "invoice", "payment", "billing", "checkout", "finance", "wallet"}
+
 REDIRECT_PARAMS = {"redirect", "redir", "goto", "forward", "return_to", "bounce", "out", "external_url"}
 
-TARGET_BRANDS = list(TRUSTED_DOMAINS)
+TARGET_BRANDS = [
+    "google", "microsoft", "apple", "paypal", "amazon", "netflix",
+    "facebook", "instagram", "whatsapp", "telegram", "discord", "github",
+    "openai", "chatgpt", "dropbox", "adobe", "office365", "onedrive",
+    "yahoo", "linkedin", "allegro"
+]
 _IPV4_RE = re.compile(r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$')
 
 # ─────────────────────────────────────────────────────────
@@ -195,6 +207,7 @@ def extract_features(url: str) -> dict:
     is_coding_platform    = 1 if root_domain in CODING          else 0
     is_educational_platform = 1 if root_domain in EDUCATIONAL   else 0
     is_social_platform    = 1 if root_domain in SOCIAL          else 0
+    is_sports_news_platform = 1 if root_domain in SPORTS_NEWS   else 0
 
     # ── Brand Impersonation ──────────────────────────────
     brand_impersonation = 0
@@ -236,6 +249,18 @@ def extract_features(url: str) -> dict:
 
     has_scam_keywords = 1 if any(k in url_lower for k in SCAM_KEYWORDS) else 0
 
+    # ── New Phase Improvements (Not in ML list, but used in scoring) ─────
+    has_fake_login = 1 if any(k in url_lower for k in FAKE_LOGIN_KEYWORDS) else 0
+    has_financial_keywords = 1 if any(k in url_lower for k in FINANCIAL_KEYWORDS) else 0
+    
+    has_random_numeric_subdomain = 0
+    if subdomain:
+        for sub in subdomain.split('.'):
+            if len(sub) > 5 and sum(1 for c in sub if c.isdigit()) / len(sub) > 0.4:
+                has_random_numeric_subdomain = 1
+            elif _entropy(sub) > 3.5:
+                has_random_numeric_subdomain = 1
+
     return {
         "url_length":             url_length,
         "dot_count":              dot_count,
@@ -261,12 +286,16 @@ def extract_features(url: str) -> dict:
         "is_coding_platform":     is_coding_platform,
         "is_educational_platform":is_educational_platform,
         "is_social_platform":     is_social_platform,
+        "is_sports_news_platform": is_sports_news_platform,
         # Phase 1.6
         "has_malformed_chars":    has_malformed_chars,
         "special_char_ratio":     special_char_ratio,
         "query_entropy":          query_entropy,
         "has_script_payload":     has_script_payload,
         "has_homoglyph_spoof":    has_homoglyph_spoof,
+        "has_fake_login":         has_fake_login,
+        "has_financial_keywords": has_financial_keywords,
+        "has_random_numeric_subdomain": has_random_numeric_subdomain,
     }
 
 def get_feature_list(url: str) -> list:

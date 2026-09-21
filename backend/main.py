@@ -3,6 +3,11 @@ import json
 import base64
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# Load environment variables (.env from current directory or parent directory)
+load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from predict import predict_url
 
@@ -73,7 +78,14 @@ def predict():
             "threat_timeline": res["threat_timeline"],
             "visualizations": res["visualizations"],
             "extracted_features": res["extracted_features"],
-            "analyst_report": res["analyst_report"]
+            "analyst_report": res["analyst_report"],
+            
+            # Phase 5 endpoints addition
+            "brand_detection": res.get("brand_detection"),
+            "attack_classification": res.get("attack_classification"),
+            "risk_scorecard": res.get("risk_scorecard"),
+            "recommendations": res.get("recommendations"),
+            "full_analyst_report": res.get("full_analyst_report")
         }), 200
     except Exception as exc:
         return jsonify({

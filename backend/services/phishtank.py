@@ -1,22 +1,12 @@
 import os
 import requests
 
-MOCK_PHISHTANK = {
-    "https://youtube-security-alert.xyz": True,
-    "https://netfliix-login-auth.net": True,
-    "https://paypal-verification-secure-login.com": True,
-    "https://adult-dating-porn-webcam-leak.top": False
-}
-
 def query_phishtank(url: str) -> bool:
     """
     Checks if URL is reported on PhishTank.
-    Uses PhishTank API or mock fallback for local tests.
+    Uses PhishTank API.
     """
     clean_url = url.strip().lower()
-    for mock_url, is_phish in MOCK_PHISHTANK.items():
-        if mock_url in clean_url:
-            return is_phish
 
     api_key = os.getenv("PHISHTANK_API_KEY")
     # PhishTank API endpoint

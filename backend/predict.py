@@ -24,6 +24,12 @@ import shap
 from feature_engineering import extract_features, get_feature_list
 from threat_intel import get_threat_intelligence, calculate_threat_intel_boost
 
+from brand_detector import detect_brand_impersonation
+from attack_classifier import classify_attack
+from risk_engine import calculate_risk_scorecard
+from report_generator import generate_analyst_report
+from recommendation_engine import get_recommendations
+
 _MODEL_CACHE = None
 _EXPLAINER_CACHE = None
 
@@ -259,10 +265,12 @@ def _hybrid_score_tracked(raw_prob: float, feats: dict) -> tuple[float, list[str
     return min(1.0, max(0.0, prob)), signals, rule_adjustments
 
 
-def _risk_level(prob: float) -> str:
-    if prob < 0.30: return "LOW"
-    if prob < 0.60: return "MEDIUM"
-    return "HIGH"
+def _risk_level_from_score(score: int) -> str:
+    if score <= 25: return "SAFE"
+    if score <= 50: return "LOW RISK"
+    if score <= 70: return "SUSPICIOUS"
+    if score <= 85: return "HIGH RISK"
+    return "DANGEROUS"
 
 
 def generate_analyst_summary(feats_dict, is_phishing, confidence, risk_level, triggered_signals, ti_data):
@@ -293,7 +301,7 @@ def generate_analyst_summary(feats_dict, is_phishing, confidence, risk_level, tr
         if reasons:
             summary += "Attack vectors: " + ", ".join(reasons) + "."
     else:
-        summary = f"URL verified as SAFE. Confidence score: {(1-confidence)*100:.1f}% ({risk_level} Risk). "
+        summary = f"URL verified as SAFE. Confidence score: {(confidence)*100:.1f}% ({risk_level}). "
         trusts = []
         if feats_dict.get("is_trusted_domain"):
             trusts.append("known trusted registry")
@@ -371,7 +379,7 @@ def build_threat_timeline(feats_dict, raw_prob, adj_prob, final_prob, triggered_
     timeline.append({
         "step": step,
         "event": "Risk Heuristics & Threat Feed Merging",
-        "details": f"Final probability calculated at {final_prob*100:.1f}%."
+        "details": f"Final unified risk score calculated."
     })
         
     return timeline
@@ -478,8 +486,76 @@ def predict_url(url: str) -> dict:
     # ── PHASE 4 STEP 3: Hybrid Risk Scoring ──
     adj_prob, signals, rule_adjustments = _hybrid_score_tracked(raw_prob, feats_dict)
 
-    # ── PHASE 4 STEP 4: Merge Threat Intel ──
-    final_prob = min(1.0, max(0.0, adj_prob + ti_boost))
+    # ── PHASE 5: Advanced Modules ──
+    # Calculate Risk Scorecard which now handles weighting and overrides
+    brand_data = detect_brand_impersonation(sanitized_url, feats_dict)
+    risk_scorecard = calculate_risk_scorecard(sanitized_url, float(raw_prob), feats_dict, ti_data, brand_data)
+    
+    # ── HEURISTIC SCORING IMPROVEMENTS ──
+    heur_score = int(raw_prob * 30) # Base ML contribution
+
+    if feats_dict.get("brand_impersonation"):
+        heur_score += 20
+    if feats_dict.get("is_risky_tld"):
+        heur_score += 15
+    if feats_dict.get("has_random_numeric_subdomain"):
+        heur_score += 15
+    if feats_dict.get("domain_entropy", 0) > 4.0 or feats_dict.get("query_entropy", 0) > 4.5:
+        heur_score += 10
+    if feats_dict.get("is_ip_address"):
+        heur_score += 20
+    if feats_dict.get("has_fake_login"):
+        heur_score += 20
+    if feats_dict.get("has_financial_keywords"):
+        heur_score += 15
+    if feats_dict.get("url_length", 0) > 75:
+        heur_score += 10
+    if feats_dict.get("hyphen_count", 0) > 3:
+        heur_score += 10
+    if feats_dict.get("special_char_ratio", 0) > 0.2:
+        heur_score += 10
+    if feats_dict.get("subdomain_count", 0) > 2:
+        heur_score += 10
+    if feats_dict.get("digit_ratio", 0) > 0.2:
+        heur_score += 10
+    if feats_dict.get("has_homoglyph_spoof"):
+        heur_score += 20
+    if feats_dict.get("has_script_payload"):
+        heur_score += 20
+
+    # Threat Intelligence (Known phishing)
+    ti_hit = False
+    if ti_data and (ti_data.get("phishtank") or ti_data.get("openphish") or ti_data.get("urlhaus") or ti_data.get("virustotal", {}).get("detections", 0) > 0):
+        ti_hit = True
+        heur_score = max(heur_score, 95)
+        
+    # Safe domains target behavior (0-10)
+    if feats_dict.get("is_trusted_domain") and not heur_score > 40 and not ti_hit:
+        heur_score = min(heur_score, 10)
+
+    final_risk_score = min(100, heur_score)
+    risk_scorecard["overall_risk"] = final_risk_score
+
+    # Confidence recalibration
+    if ti_hit:
+        final_confidence = 0.99
+    elif final_risk_score >= 80:
+        final_confidence = 0.95
+    elif final_risk_score >= 60:
+        final_confidence = 0.85
+    elif final_risk_score <= 10:
+        final_confidence = 0.99
+    else:
+        final_confidence = max(0.50, min(0.99, 0.60 + (final_risk_score/100.0) * 0.35))
+        
+    risk_scorecard["confidence"] = final_confidence
+    
+    is_phishing = final_risk_score >= 60
+    risk_level_str = _risk_level_from_score(final_risk_score)
+    
+    attack_data = classify_attack(sanitized_url, feats_dict, is_phishing)
+    recommendations = get_recommendations("Employee", is_phishing, attack_data.get("primary_attack_type", ""))
+    analyst_report = generate_analyst_report(sanitized_url, is_phishing, final_confidence, attack_data, brand_data, risk_scorecard, recommendations)
 
     # SHAP local calculations
     shap_values_obj = explainer(X)
@@ -533,10 +609,16 @@ def predict_url(url: str) -> dict:
     
     # Add threat intel matches to explanations
     for feat_name, boost_val, sig_msg in ti_triggers:
-        if feat_name == "phishtank_match": msg = "PhishTank blacklist hit."
-        elif feat_name == "openphish_match": msg = "OpenPhish blacklist hit."
-        elif feat_name == "virustotal_detections": msg = f"VirusTotal Alert ({ti_data['virustotal']['detections']} detections)."
-        elif feat_name == "urlhaus_match": msg = "URLHaus malware hit."
+        if feat_name == "phishtank_match":
+            msg = "PhishTank blacklist hit."
+        elif feat_name == "openphish_match":
+            msg = "OpenPhish blacklist hit."
+        elif feat_name == "virustotal_detections":
+            msg = f"VirusTotal Alert ({ti_data['virustotal']['detections']} detections)."
+        elif feat_name == "urlhaus_match":
+            msg = "URLHaus malware hit."
+        else:
+            msg = sig_msg
         
         human_explanations.append({
             "feature": feat_name,
@@ -608,8 +690,7 @@ def predict_url(url: str) -> dict:
                 })
 
     # Filter explanations based on final classification outcome
-    verdict_is_phish = final_prob > 0.50
-    target_type = "RISK_FACTOR" if verdict_is_phish else "TRUST_FACTOR"
+    target_type = "RISK_FACTOR" if is_phishing else "TRUST_FACTOR"
     
     # Sort and filter to maximum 5 explanation points (Phase 4 Requirement)
     sorted_exps = sorted(human_explanations, key=lambda x: abs(float(x["impact_percent"].replace('%','').replace('+',''))), reverse=True)
@@ -622,14 +703,14 @@ def predict_url(url: str) -> dict:
         signals_combined.append(sig_msg)
 
     # Analyst Report Summarization
-    analyst_summary = generate_analyst_summary(feats_dict, final_prob > 0.50, final_prob, _risk_level(final_prob), signals_combined, ti_data)
+    analyst_summary = generate_analyst_summary(feats_dict, is_phishing, final_confidence, risk_level_str, signals_combined, ti_data)
 
     # Threat Timeline Generation
-    threat_timeline = build_threat_timeline(feats_dict, raw_prob, adj_prob, final_prob, signals, ti_triggers)
+    threat_timeline = build_threat_timeline(feats_dict, raw_prob, adj_prob, final_risk_score/100.0, signals, ti_triggers)
 
     # SHAP Local Visualizations Generation
     # Create temporary total_impacts matching FEATURE_NAMES size
-    visualizations = generate_local_plots(explainer, shap_values_obj, X, total_impacts, base_prob, final_prob)
+    visualizations = generate_local_plots(explainer, shap_values_obj, X, total_impacts, base_prob, final_risk_score/100.0)
 
     # Risk and Trust indicator lists
     risk_indicators = [exp["message"] for exp in human_explanations_capped if exp["impact_type"] == "RISK_FACTOR"]
@@ -637,10 +718,10 @@ def predict_url(url: str) -> dict:
 
     return {
         "url": sanitized_url,
-        "is_phishing": final_prob > 0.50,
-        "confidence_score": final_prob,
-        "confidence": final_prob, # Backward compatibility
-        "risk_level": _risk_level(final_prob),
+        "is_phishing": is_phishing,
+        "confidence_score": final_confidence,
+        "confidence": final_confidence, # Backward compatibility
+        "risk_level": risk_level_str,
         "triggered_signals": signals_combined,
         
         # Threat Intelligence Block (Phase 4 Requirement)
@@ -656,6 +737,13 @@ def predict_url(url: str) -> dict:
         "features": feats_dict, # Backward compatibility
         "extracted_features": feats_dict, # Double compatibility
         
+        # Phase 5 Additions
+        "brand_detection": brand_data,
+        "attack_classification": attack_data,
+        "risk_scorecard": risk_scorecard,
+        "recommendations": recommendations,
+        "full_analyst_report": analyst_report,
+        
         # Analyst structured report fields
         "analyst_report": {
             "threat_summary": analyst_summary,
@@ -663,6 +751,68 @@ def predict_url(url: str) -> dict:
             "trust_indicators": trust_indicators,
             "ml_feature_analysis": [{ "feature": item["feature"], "impact": item["impact"] } for item in top_contributors[:6]],
             "triggered_security_rules": signals_combined,
-            "final_verdict": "PHISHING" if final_prob > 0.50 else "SAFE"
+            "final_verdict": "PHISHING" if is_phishing else "SAFE"
         }
     }
+# ============================================================
+# CLI ENTRY POINT
+# ============================================================
+
+def main():
+    print("\n=== XPhishGuard AI URL Detector ===")
+
+    while True:
+        url = input("\nEnter URL to scan (or type 'exit'): ").strip()
+
+        if url.lower() == "exit":
+            print("Exiting XPhishGuard AI.")
+            break
+
+        if not url:
+            print("Please enter a valid URL.")
+            continue
+
+        try:
+            result = predict_url(url)
+
+            print("\n===== RESULT =====")
+            print(f"URL: {result.get('url', url)}")
+
+            prediction = (
+                "PHISHING"
+                if result.get("is_phishing", False)
+                else "SAFE"
+            )
+
+            confidence = result.get(
+                "confidence_score",
+                result.get("confidence", 0)
+            )
+
+            print(f"Prediction: {prediction}")
+            print(f"Confidence: {confidence * 100:.2f}%")
+
+            print(f"Risk Level: {result.get('risk_level', 'UNKNOWN')}")
+
+            signals = result.get("triggered_signals", [])
+
+            if signals:
+                print("\nSecurity Signals:")
+                for signal in signals:
+                    print(f"  - {signal}")
+
+            explanations = result.get("human_explanations", [])
+
+            if explanations:
+                print("\nAI Explanation:")
+                for explanation in explanations:
+                    print(f"  - {explanation.get('message', explanation)}")
+
+            print("\n===================")
+
+        except Exception as e:
+            print(f"\nERROR: {e}")
+
+
+if __name__ == "__main__":
+    main()
